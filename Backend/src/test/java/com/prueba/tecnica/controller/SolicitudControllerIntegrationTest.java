@@ -42,7 +42,6 @@ class SolicitudControllerIntegrationTest {
 
     @Test
     void testCrearSolicitud_Success() throws Exception {
-        // Given
         CreateSolicitudDTO dto = CreateSolicitudDTO.builder()
                 .usuario("Juan Perez")
                 .tipo(TipoSolicitud.INCIDENTE)
@@ -60,7 +59,6 @@ class SolicitudControllerIntegrationTest {
         when(solicitudMapper.toEntity(any(CreateSolicitudDTO.class))).thenReturn(solicitudCreada);
         when(solicitudService.crearSolicitud(any(Solicitud.class))).thenReturn(solicitudCreada);
 
-        // When & Then
         mockMvc.perform(post("/Solicitud/Crear")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
@@ -73,14 +71,12 @@ class SolicitudControllerIntegrationTest {
 
     @Test
     void testCrearSolicitud_ValidationError_UsuarioVacio() throws Exception {
-        // Given
         CreateSolicitudDTO dto = CreateSolicitudDTO.builder()
                 .usuario("") // usuario vacío - debe fallar
                 .tipo(TipoSolicitud.INCIDENTE)
                 .prioridadManual(5)
                 .build();
 
-        // When & Then
         mockMvc.perform(post("/Solicitud/Crear")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
@@ -91,14 +87,12 @@ class SolicitudControllerIntegrationTest {
 
     @Test
     void testCrearSolicitud_ValidationError_PrioridadFueraDeRango() throws Exception {
-        // Given
         CreateSolicitudDTO dto = CreateSolicitudDTO.builder()
                 .usuario("Juan Perez")
                 .tipo(TipoSolicitud.INCIDENTE)
                 .prioridadManual(10) // fuera de rango 1-5
                 .build();
 
-        // When & Then
         mockMvc.perform(post("/Solicitud/Crear")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
@@ -108,7 +102,6 @@ class SolicitudControllerIntegrationTest {
 
     @Test
     void testListarTodas() throws Exception {
-        // Given
         Solicitud sol1 = Solicitud.builder()
                 .id(1L)
                 .usuario("Usuario1")
@@ -127,7 +120,6 @@ class SolicitudControllerIntegrationTest {
 
         when(solicitudService.listarTodas()).thenReturn(Arrays.asList(sol1, sol2));
 
-        // When & Then
         mockMvc.perform(get("/Listar"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -139,7 +131,6 @@ class SolicitudControllerIntegrationTest {
 
     @Test
     void testListarPriorizadas() throws Exception {
-        // Given
         Solicitud sol1 = Solicitud.builder()
                 .id(1L)
                 .usuario("Usuario1")
@@ -169,7 +160,6 @@ class SolicitudControllerIntegrationTest {
         List<SolicitudPriorizada> priorizadas = Arrays.asList(priorizada1, priorizada2);
         when(solicitudService.listarPriorizadas()).thenReturn(priorizadas);
 
-        // When & Then
         mockMvc.perform(get("/Listar/Priorizado"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -181,10 +171,8 @@ class SolicitudControllerIntegrationTest {
 
     @Test
     void testListarTodas_ListaVacia() throws Exception {
-        // Given
         when(solicitudService.listarTodas()).thenReturn(Arrays.asList());
 
-        // When & Then
         mockMvc.perform(get("/Listar"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));

@@ -7,6 +7,7 @@ import com.prueba.tecnica.repository.SolicitudRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,6 +20,9 @@ public class SolicitudService {
     private final Pipeline<SolicitudPriorizada> prioritizationPipeline;
 
     public Solicitud crearSolicitud(Solicitud solicitud) {
+        if (solicitud.getFechaCreacion() == null) {
+            solicitud.setFechaCreacion(LocalDateTime.now());
+        }
         return solicitudRepository.save(solicitud);
     }
 
