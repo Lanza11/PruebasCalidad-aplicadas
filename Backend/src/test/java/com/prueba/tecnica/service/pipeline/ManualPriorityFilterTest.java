@@ -111,6 +111,7 @@ class ManualPriorityFilterTest {
     // Probamos con una prioridad manual superior al rango esperado (por ejemplo, 10), deberia ajustarse y 
     // calcular es con valores dentro del rango, no aplicar tal cual la prioridad manual de 10 * 10 para un score 
     // de 1000, sino que se ajustaria a prioridad 5 * peso 10 para un score de 50
+    // Bug solucionado
     
     @Test
     void testPrioridadExcesiva_CalculaSinRestriccionesInternas() {
@@ -119,9 +120,7 @@ class ManualPriorityFilterTest {
         SolicitudPriorizada resultado = manualPriorityFilter.execute(entrada);
         assertEquals(50.0, resultado.getScore(),
                 "Prioridad 10 ajustada a 5 * peso 10 debe dar 50 puntos");
-    } //este falla porque? porque en el diseño inicial estaba confiando en que el controlador haria la validacion 
-    // de que la prioridad manual no exceda el rango permitido, pero el filtro como tal carece de dicha validacion
-    // y deberia implementarse a futuro un ajsute al mismo
+    }
 
 
     private SolicitudPriorizada solicitudConPrioridad(Integer prioridad, double scoreInicial) {
