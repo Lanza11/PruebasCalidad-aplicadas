@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -130,6 +131,73 @@ class SolicitudServiceTest {
         verify(solicitudRepository).save(solicitudCaptor.capture());
         assertEquals(fechaHistorica, solicitudCaptor.getValue().getFechaCreacion(),
                 "El servicio no debe modificar la fechaCreacion si ya estaba establecida");
+    }
+
+
+    @Test
+    void testListarTodas_DelegaEnRepositorioYRetornaResultados() {
+        Solicitud s1 = Solicitud.builder()
+                .id(10L)
+                .usuario("U1")
+                .tipo(TipoSolicitud.CONSULTA)
+                .prioridadManual(2)
+                .fechaCreacion(LocalDateTime.now())
+                .build();
+        Solicitud s2 = Solicitud.builder()
+                .id(20L)
+                .usuario("U2")
+                .tipo(TipoSolicitud.INCIDENTE)
+                .prioridadManual(4)
+                .fechaCreacion(LocalDateTime.now())
+                .build();
+
+        List<Solicitud> esperadas = Arrays.asList(s1, s2);
+        when(solicitudRepository.findAll()).thenReturn(esperadas);
+
+        List<Solicitud> resultado = solicitudService.listarTodas();
+
+        assertEquals(2, resultado.size());
+        assertEquals(10L, resultado.get(0).getId());
+        assertEquals(20L, resultado.get(1).getId());
+        verify(solicitudRepository, times(1)).findAll();
+        verifyNoInteractions(prioritizationPipeline);
+    }
+
+
+    @Test
+    void testListarPriorizadas_ProcesaYOrdenaPorScoreDescendente() {
+        Solicitud s1 = Solicitud.builder()
+                .id(1L)
+                .usuario("U1")
+                .tipo(TipoSolicitud.CONSULTA)
+                .prioridadManual(1)
+                .fechaCreacion(LocalDateTime.now())
+                .build();
+        Solicitud s2 = Solicitud.builder()
+                .id(2L)
+                .usuario("U2")
+                .tipo(TipoSolicitud.INCIDENTE)
+                .prioridadManual(5)
+                .fechaCreacion(LocalDateTime.now())
+                .build();
+
+        when(solicitudRepository.findAll()).thenReturn(Arrays.asList(s1, s2));
+        when(prioritizationPipeline.process(any(SolicitudPriorizada.class)))
+                .thenAnswer(invocacion -> {
+                    SolicitudPriorizada entrada = invocacion.getArgument(0);
+                    double score = entrada.getSolicitud().getId().equals(1L) ? 10.0 : 50.0;
+                    return new SolicitudPriorizada(entrada.getSolicitud(), score);
+                });
+
+        List<SolicitudPriorizada> resultado = solicitudService.listarPriorizadas();
+
+        assertEquals(2, resultado.size());
+        assertEquals(2L, resultado.get(0).getSolicitud().getId());
+        assertEquals(50.0, resultado.get(0).getScore());
+        assertEquals(1L, resultado.get(1).getSolicitud().getId());
+        assertEquals(10.0, resultado.get(1).getScore());
+        verify(solicitudRepository, times(1)).findAll();
+        verify(prioritizationPipeline, times(2)).process(any(SolicitudPriorizada.class));
     }
 
     

@@ -5,6 +5,8 @@ import com.prueba.tecnica.dto.SolicitudPriorizada;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 @Component
 public class ManualPriorityFilter implements Filter<SolicitudPriorizada> {
 
@@ -13,11 +15,16 @@ public class ManualPriorityFilter implements Filter<SolicitudPriorizada> {
 
     @Override
     public SolicitudPriorizada execute(SolicitudPriorizada input) {
-        Integer priority = input.getSolicitud().getPrioridadManual();
-        if (priority != null) {
-            priority = Math.max(1, Math.min(5, priority)); // Aseguramos que la prioridad esté en el rango 1-5
-            input.setScore(input.getScore() + (priority * manualWeight));
-        }
+        double points = Optional.ofNullable(input.getSolicitud().getPrioridadManual())
+                .map(this::capManPriority)
+                .map(priority -> priority * manualWeight)
+                .orElse(0.0);
+
+        input.setScore(input.getScore() + points);
         return input;
+    }
+
+    private int capManPriority(int priority) {
+        return Math.max(1, Math.min(5, priority));
     }
 }
