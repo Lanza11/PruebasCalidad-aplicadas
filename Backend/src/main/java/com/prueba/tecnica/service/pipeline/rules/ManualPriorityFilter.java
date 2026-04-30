@@ -15,6 +15,7 @@ public class ManualPriorityFilter implements Filter<SolicitudPriorizada> {
     public SolicitudPriorizada execute(SolicitudPriorizada input) {
         Integer priority = input.getSolicitud().getPrioridadManual();
         if (priority != null) {
+            priority = Math.max(1, Math.min(5, priority)); // Aseguramos que la prioridad esté en el rango 1-5
             input.setScore(input.getScore() + (priority * manualWeight));
         }
         return input;

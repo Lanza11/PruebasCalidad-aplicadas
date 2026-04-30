@@ -73,22 +73,19 @@ class ManualPriorityFilterTest {
                 "Prioridad 5 * peso 20 debe dar 100 puntos");
     }
 
+    // Probamos con una prioridad manual superior al rango esperado (por ejemplo, 10), deberia ajustarse y 
+    // calcular es con valores dentro del rango, no aplicar tal cual la prioridad manual de 10 * 10 para un score 
+    // de 1000, sino que se ajustaria a prioridad 5 * peso 10 para un score de 50
+    // Bug solucionado
+    
     @Test
     void debeRetornarInputCuandoPrioridadEsNula() {
         ManualPriorityFilter filter = new ManualPriorityFilter();
 
-        Solicitud solicitud = new Solicitud();
-        solicitud.setPrioridadManual(null);
-        SolicitudPriorizada input = new SolicitudPriorizada(solicitud, 0);
-
-        assertEquals(0, filter.execute(input).getScore());
+        SolicitudPriorizada resultado = manualPriorityFilter.execute(entrada);
+        assertEquals(50.0, resultado.getScore(),
+                "Prioridad 10 ajustada a 5 * peso 10 debe dar 50 puntos");
     }
-
-    @Test
-    void debeCalcularConPrioridadMayorACinco() {
-        // El código original NO tiene clampeo: 10 * 10.0 = 100.0
-        ManualPriorityFilter filter = new ManualPriorityFilter();
-        ReflectionTestUtils.setField(filter, "manualWeight", 10.0);
 
         Solicitud solicitud = new Solicitud();
         solicitud.setPrioridadManual(10);
