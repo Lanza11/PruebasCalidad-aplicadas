@@ -16,20 +16,6 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    // ── Métodos auxiliares ──────────────────────────────────────────────────
-
-    private String getPath(WebRequest request) {
-        return request.getDescription(false).replace("uri=", "");
-    }
-
-    private String resolveJsonErrorMessage(HttpMessageNotReadableException ex) {
-        if (ex.getMessage().contains("TipoSolicitud")) {
-            return "Tipo de solicitud inválido. Valores permitidos: INCIDENTE, REQUERIMIENTO, CONSULTA";
-        }
-        return "Error al procesar el JSON. Verifica que el formato sea correcto.";
-    }
-
-    // ── Handlers ────────────────────────────────────────────────────────────
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(
@@ -44,11 +30,11 @@ public class GlobalExceptionHandler {
         });
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Validation Error")
                 .message("Los datos enviados no son válidos")
-                .path(getPath(request))
+                .path(request.getDescription(false).replace("uri=", ""))
                 .validationErrors(validationErrors)
                 .build();
 
@@ -68,11 +54,11 @@ public class GlobalExceptionHandler {
         });
 
         ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
+                .timestamp(java.time.LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
                 .error("Constraint Violation")
                 .message("Violación de restricciones de validación")
-                .path(getPath(request))
+                .path(request.getDescription(false).replace("uri=", ""))
                 .validationErrors(validationErrors)
                 .build();
 
@@ -84,11 +70,18 @@ public class GlobalExceptionHandler {
             HttpMessageNotReadableException ex,
             WebRequest request) {
 
+        String message = "Error al procesar el JSON. Verifica que el formato sea correcto.";
+
+        // Revisar si el error es por el enum TipoSolicitud
+        if (ex.getMessage().contains("TipoSolicitud")) {
+            message = "Tipo de solicitud inválido. Valores permitidos: INCIDENTE, REQUERIMIENTO, CONSULTA";
+        }
+
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "Bad Request",
-                resolveJsonErrorMessage(ex),
-                getPath(request));
+                message,
+                request.getDescription(false).replace("uri=", ""));
 
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -102,9 +95,8 @@ public class GlobalExceptionHandler {
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
                 "Ha ocurrido un error interno. Por favor, intenta nuevamente.",
-                getPath(request));
+                request.getDescription(false).replace("uri=", ""));
 
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
 }
