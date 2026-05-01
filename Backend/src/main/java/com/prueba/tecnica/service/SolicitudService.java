@@ -20,9 +20,7 @@ public class SolicitudService {
     private final Pipeline<SolicitudPriorizada> prioritizationPipeline;
 
     public Solicitud crearSolicitud(Solicitud solicitud) {
-        if (solicitud.getFechaCreacion() == null) {
-            solicitud.setFechaCreacion(LocalDateTime.now());
-        }
+        ensureCreationDate(solicitud);
         return solicitudRepository.save(solicitud);
     }
 
@@ -32,8 +30,17 @@ public class SolicitudService {
 
     public List<SolicitudPriorizada> listarPriorizadas() {
         List<Solicitud> todas = solicitudRepository.findAll();
+        return prioritizeAndSort(todas);
+    }
 
-        return todas.stream()
+    private void ensureCreationDate(Solicitud solicitud) {
+        if (solicitud.getFechaCreacion() == null) {
+            solicitud.setFechaCreacion(LocalDateTime.now());
+        }
+    }
+
+    private List<SolicitudPriorizada> prioritizeAndSort(List<Solicitud> solicitudes) {
+        return solicitudes.stream()
                 .map(solicitud -> new SolicitudPriorizada(solicitud, 0))
                 .map(prioritizationPipeline::process)
                 .sorted(Comparator.comparingDouble(SolicitudPriorizada::getScore).reversed()) // Higher score first
