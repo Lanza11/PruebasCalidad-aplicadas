@@ -18,42 +18,87 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     private String getPath(WebRequest request) {
-        return ExceptionResponseFactory.getPath(request);
+        return request.getDescription(false).replace("uri=", "");
     }
 
     private String resolveJsonErrorMessage(HttpMessageNotReadableException ex) {
-        return ExceptionResponseFactory.resolveJsonErrorMessage(ex);
+        if (ex.getMessage().contains("TipoSolicitud")) {
+            return "Tipo de solicitud inválido. Valores permitidos: INCIDENTE, REQUERIMIENTO, CONSULTA";
+        }
+        return "Error al procesar el JSON. Verifica que el formato sea correcto.";
     }
 
     private Map<String, String> buildValidationErrors(MethodArgumentNotValidException ex) {
-        return ExceptionResponseFactory.buildValidationErrors(ex);
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach(error -> {
+            String fieldName = ((FieldError) error).getField();
+            errors.put(fieldName, error.getDefaultMessage());
+        });
+        return errors;
     }
 
     private Map<String, String> buildConstraintErrors(ConstraintViolationException ex) {
-        return ExceptionResponseFactory.buildConstraintErrors(ex);
+        Map<String, String> errors = new HashMap<>();
+        ex.getConstraintViolations()
+                .forEach(violation -> errors.put(violation.getPropertyPath().toString(), violation.getMessage()));
+        return errors;
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(
             MethodArgumentNotValidException ex, WebRequest request) {
-        return new ResponseEntity<>(ExceptionResponseFactory.buildValidationResponse(ex, request), HttpStatus.BAD_REQUEST);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Validation Error")
+                .message("Los datos enviados no son válidos")
+                .path(getPath(request))
+                .validationErrors(buildValidationErrors(ex))
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraintViolationException(
             ConstraintViolationException ex, WebRequest request) {
-        return new ResponseEntity<>(ExceptionResponseFactory.buildConstraintResponse(ex, request), HttpStatus.BAD_REQUEST);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Constraint Violation")
+                .message("Violación de restricciones de validación")
+                .path(getPath(request))
+                .validationErrors(buildConstraintErrors(ex))
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(
             HttpMessageNotReadableException ex, WebRequest request) {
-        return new ResponseEntity<>(ExceptionResponseFactory.buildJsonResponse(ex, request), HttpStatus.BAD_REQUEST);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                resolveJsonErrorMessage(ex),
+                getPath(request));
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
             Exception ex, WebRequest request) {
-        return new ResponseEntity<>(ExceptionResponseFactory.buildGlobalResponse(request), HttpStatus.INTERNAL_SERVER_ERROR);
+
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal Server Error",
+                "Ha ocurrido un error interno. Por favor, intenta nuevamente.",
+                getPath(request));
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
